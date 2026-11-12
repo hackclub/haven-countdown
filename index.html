@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Haven Countdown</title>
+  <link rel="icon" href="favicon.png">
+  <link rel="preload" href="assets/fonts/darumadrop-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="bg" aria-hidden="true"></div>
+  <img id="bushes" src="assets/img/footer-bottom-bushes.webp" alt="" aria-hidden="true">
+
+  <div id="stage">
+    <div class="frame" aria-hidden="true"><i class="t"></i><i class="r"></i><i class="b"></i><i class="l"></i></div>
+    <img class="logo" src="assets/img/logo.webp" alt="Hack Club Haven">
+
+    <main class="center">
+      <div class="digits" id="digits"></div>
+      <div class="caption" id="caption"></div>
+    </main>
+
+    <div class="marquee" id="marquee" hidden><div class="track" id="track"></div></div>
+
+    <div class="sim" id="sim" hidden></div>
+  </div>
+  <canvas id="confetti" aria-hidden="true"></canvas>
+
+  <script src="data/events.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
