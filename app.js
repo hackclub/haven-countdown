@@ -96,7 +96,7 @@
       setText('caption', 'Haven has started');
     } else {
       showCountdown(0, false);
-      setText('caption', 'Haven is over · all events have happened');
+      setText('caption', 'Haven is over');
     }
 
     // havens that just started jump the marquee queue; finished ones drop out of it
