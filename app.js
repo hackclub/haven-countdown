@@ -67,7 +67,7 @@
   }
   function marqueeFrame(dt) {
     const win = track.parentElement.offsetWidth;
-    x -= 70 * dt;
+    x -= 160 * dt;
     let first = track.firstElementChild;
     // spans are flex items, so offsetWidth already includes the "·" separator
     while (first && x + first.offsetWidth < 0) {
