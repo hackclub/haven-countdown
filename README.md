@@ -1,6 +1,6 @@
 # haven-countdown
 
-Big-screen countdown for Hack Club Haven. One huge countdown to the next haven starting, a "Haven X has started!" moment when one kicks off, and a marquee of every haven that's live right now.
+Big-screen countdown for Hack Club Haven: one huge countdown to the next haven starting, plus a marquee of every haven live right now.
 
 Static site, no build step. Open `index.html` (works straight from disk too) and press `F` or double-click for fullscreen.
 

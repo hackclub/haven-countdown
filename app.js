@@ -1,4 +1,4 @@
-/* Haven countdown. One big countdown + a marquee of the havens running right now.
+/* Haven countdown. One big countdown to the next haven + a marquee of the havens running right now.
  *
  * URL options (all optional, for testing / rehearsals):
  *   ?at=2026-11-13T03:59:50Z   pretend it's this moment
@@ -22,27 +22,12 @@
     .map((e) => ({ name: e.name, country: e.country || '', tz: e.tz || 'UTC', start: Date.parse(e.start), end: Date.parse(e.end) }))
     .filter((e) => e.end > e.start)
     .sort((a, b) => a.start - b.start || a.name.localeCompare(b.name));
-  const COUNTRIES = new Set(EVENTS.map((e) => e.country).filter(Boolean)).size;
-  const CHEER_MS = 20000; // how long "Haven X has started!" stays up
 
-  // ---- formatting ----
-  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const pad = (n) => String(n).padStart(2, '0');
-  function localWhen(ms, tz) {
-    const day = new Intl.DateTimeFormat('en-GB', { timeZone: tz, weekday: 'short', day: 'numeric', month: 'short' }).format(ms).replace(',', '');
-    const time = new Intl.DateTimeFormat('en-US', { timeZone: tz, hour: 'numeric', minute: '2-digit' }).format(ms)
-      .replace(/[\s ]?([AP])M/i, (_, p) => ' ' + p.toLowerCase() + 'm');
-    return `${day} · ${time} local time`;
-  }
-  const names = (list) => {
-    const n = list.map((e) => e.name);
-    return n.length <= 3 ? n.join(', ').replace(/, ([^,]*)$/, ' & $1') : `${n.slice(0, 2).join(', ')} + ${n.length - 2} more`;
-  };
 
   // ---- big center ----
-  const center = document.querySelector('.center');
   let shape = '';
-  function setText(id, html) { const el = $(id); if (el.dataset.v !== html) { el.innerHTML = html; el.dataset.v = html; } }
+  function setText(id, text) { const el = $(id); if (el.textContent !== text) el.textContent = text; }
 
   function showCountdown(ms) {
     const s = Math.max(0, Math.floor(ms / 1000));
@@ -53,7 +38,7 @@
     const sh = 'cd' + units.map(([k, v]) => k + v.length).join();
     if (sh !== shape) {
       box.innerHTML = units.map(([k, v], i) => (i ? '<div class="sep">:</div>' : '') +
-        `<div class="unit"><div class="num" data-u="${k}">${[...v].map((c) => `<span>${c}</span>`).join('')}</div><div class="cap">${k}</div></div>`).join('');
+        `<div class="num" data-u="${k}">${[...v].map((c) => `<span>${c}</span>`).join('')}</div>`).join('');
       shape = sh;
     } else {
       for (const [k, v] of units) {
@@ -63,12 +48,6 @@
     box.classList.toggle('days', !!d);
     box.classList.toggle('final', s <= 10);
   }
-  function showBig(html) {
-    const key = 'big' + html;
-    if (shape !== key) { $('digits').innerHTML = `<div class="cheer-title">${html}</div>`; shape = key; }
-    $('digits').classList.remove('days', 'final');
-  }
-
   // ---- marquee of live havens ----
   const track = $('track');
   let x = null, queue = [], live = [];
@@ -93,35 +72,9 @@
     const t = now();
     live = EVENTS.filter((e) => e.start <= t && t < e.end);
     const upcoming = EVENTS.filter((e) => e.start > t);
-    const justStarted = EVENTS.filter((e) => e.start <= t && t - e.start < CHEER_MS);
 
-    if (justStarted.length) {
-      const first = EVENTS[0] && justStarted.includes(EVENTS[0]);
-      setText('label', first ? 'Haven has begun!' : "it's game time");
-      if (justStarted.length === 1) {
-        showBig(`Haven ${esc(justStarted[0].name)} has started!`);
-        setText('sub', esc(justStarted[0].country));
-      } else {
-        showBig(`${justStarted.length} havens just started!`);
-        setText('sub', esc(names(justStarted)));
-      }
-    } else if (upcoming.length) {
-      const next = upcoming[0];
-      const group = upcoming.filter((e) => e.start === next.start);
-      const started = EVENTS.length - upcoming.length;
-      setText('label', started ? `Haven ${esc(names(group))} ${group.length > 1 ? 'start' : 'starts'} in` : 'Haven kicks off in');
-      showCountdown(next.start - t);
-      setText('sub', `${started ? '' : `first up: ${esc(next.name)}, ${esc(next.country)} · `}${esc(localWhen(next.start, next.tz))}`);
-    } else if (live.length) {
-      const last = Math.max(...live.map((e) => e.end));
-      setText('label', 'Haven wraps up in');
-      showCountdown(last - t);
-      setText('sub', `${live.length} ${live.length === 1 ? 'haven' : 'havens'} still jamming`);
-    } else {
-      setText('label', "that's a wrap!");
-      showBig('Thanks for jamming');
-      setText('sub', `${EVENTS.length} cities · ${COUNTRIES} countries`);
-    }
+    const next = upcoming[0];
+    showCountdown(next ? next.start - t : live.length ? Math.max(...live.map((e) => e.end)) - t : 0);
 
     $('marquee').hidden = !live.length;
     setText('marquee-tag', `${live.length} live now`);
