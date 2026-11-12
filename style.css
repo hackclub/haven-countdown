@@ -84,6 +84,7 @@ body.idle { cursor: none; }
 .track .tag { color: var(--butter); text-transform: lowercase; }
 .track .tag::after { content: ""; margin: 0 14px; }
 
+#confetti { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
 .sim { position: absolute; left: 50%; top: 4px; transform: translateX(-50%); background: rgba(60, 20, 0, .6); font: 15px ui-monospace, monospace; padding: 2px 12px; border-radius: 8px; }
 
 @media (prefers-reduced-motion: reduce) { #bg, .digits.final { animation: none; } }

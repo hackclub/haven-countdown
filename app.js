@@ -26,7 +26,10 @@
     try { return new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' }).format(ms); } catch { return ''; }
   };
   const EVENTS = ((window.HAVEN_DATA || {}).events || [])
-    .map((e) => ({ name: e.name, start: Date.parse(e.start), end: Date.parse(e.end), tz: e.tz || 'UTC' }))
+    .map((e) => ({
+      name: e.name && e.country && e.name !== e.country ? `${e.name}, ${e.country}` : e.name,
+      start: Date.parse(e.start), end: Date.parse(e.end), tz: e.tz || 'UTC',
+    }))
     .filter((e) => e.end > e.start && DAYS.includes(localDay(e.start, e.tz)))
     .sort((a, b) => a.start - b.start || a.name.localeCompare(b.name));
   const FIRST = Math.min(...EVENTS.map((e) => e.start));
@@ -49,7 +52,7 @@
         box.querySelectorAll(`[data-u="${k}"] span`).forEach((el, i) => { if (el.textContent !== v[i]) el.textContent = v[i]; });
       }
     }
-    box.classList.toggle('final', final && s <= 20);
+    box.classList.toggle('final', final && s <= 10);
   }
   function setText(id, text) { const el = $(id); if (el.textContent !== text) el.textContent = text; }
 
@@ -83,10 +86,81 @@
     track.style.transform = `translate3d(${x}px,0,0)`;
   }
 
+  // ---- confetti when Haven starts ----
+  const confettiCanvas = $('confetti');
+  const cctx = confettiCanvas.getContext('2d');
+  const COLORS = ['#ffd059', '#ffe382', '#fc8616', '#ed5615', '#fa681b', '#b8c220', '#2cbf90', '#ffffff'];
+  let bits = [];
+  function sizeConfetti() {
+    const dpr = Math.min(devicePixelRatio || 1, 2);
+    confettiCanvas.width = innerWidth * dpr;
+    confettiCanvas.height = innerHeight * dpr;
+    cctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  function cannon(fromLeft, count) {
+    const w = innerWidth, h = innerHeight, unit = Math.min(w / 1920, h / 1080);
+    for (let i = 0; i < count; i++) {
+      const angle = (fromLeft ? -60 : -120) + (Math.random() - 0.5) * 40;
+      const v = (1300 + Math.random() * 900) * unit;
+      bits.push({
+        x: fromLeft ? -10 : w + 10, y: h * 0.95,
+        vx: Math.cos(angle * Math.PI / 180) * v, vy: Math.sin(angle * Math.PI / 180) * v,
+        w: (14 + Math.random() * 14) * unit, h: (8 + Math.random() * 8) * unit,
+        rot: Math.random() * Math.PI * 2, spin: (Math.random() - 0.5) * 14,
+        flip: Math.random() * Math.PI * 2, flipSpeed: 6 + Math.random() * 8,
+        color: COLORS[(Math.random() * COLORS.length) | 0], round: Math.random() < 0.3,
+      });
+    }
+  }
+  function rain(count) {
+    const w = innerWidth, unit = Math.min(w / 1920, innerHeight / 1080);
+    for (let i = 0; i < count; i++) {
+      bits.push({
+        x: Math.random() * w, y: -20 - Math.random() * innerHeight * 0.6,
+        vx: (Math.random() - 0.5) * 200 * unit, vy: (100 + Math.random() * 200) * unit,
+        w: (12 + Math.random() * 12) * unit, h: (7 + Math.random() * 7) * unit,
+        rot: Math.random() * Math.PI * 2, spin: (Math.random() - 0.5) * 10,
+        flip: Math.random() * Math.PI * 2, flipSpeed: 5 + Math.random() * 7,
+        color: COLORS[(Math.random() * COLORS.length) | 0], round: Math.random() < 0.3,
+      });
+    }
+  }
+  function celebrate() {
+    sizeConfetti();
+    cannon(true, 160); cannon(false, 160);
+    setTimeout(() => { cannon(true, 90); cannon(false, 90); }, 700);
+    setTimeout(() => rain(220), 1200);
+  }
+  function confettiFrame(dt) {
+    if (!bits.length) return;
+    const unit = Math.min(innerWidth / 1920, innerHeight / 1080);
+    cctx.clearRect(0, 0, innerWidth, innerHeight);
+    for (const b of bits) {
+      b.vy += 1500 * unit * dt;                 // gravity
+      b.vx *= 1 - 1.6 * dt; b.vy *= 1 - 1.6 * dt; // air drag, so it floats down
+      b.x += b.vx * dt + Math.sin(b.flip) * 40 * unit * dt;
+      b.y += b.vy * dt;
+      b.rot += b.spin * dt; b.flip += b.flipSpeed * dt;
+      cctx.save();
+      cctx.translate(b.x, b.y);
+      cctx.rotate(b.rot);
+      cctx.scale(1, Math.cos(b.flip));
+      cctx.fillStyle = b.color;
+      if (b.round) { cctx.beginPath(); cctx.arc(0, 0, b.h / 1.6, 0, Math.PI * 2); cctx.fill(); }
+      else cctx.fillRect(-b.w / 2, -b.h / 2, b.w, b.h);
+      cctx.restore();
+    }
+    bits = bits.filter((b) => b.y < innerHeight + 60);
+    if (!bits.length) cctx.clearRect(0, 0, innerWidth, innerHeight);
+  }
+
   // ---- main tick ----
+  let prevT = null;
   function tick() {
     const t = now();
     live = EVENTS.filter((e) => e.start <= t && t < e.end);
+    if (prevT !== null && prevT < FIRST && t >= FIRST) celebrate();
+    prevT = t;
 
     if (t < FIRST) {
       showCountdown(FIRST - t, true);
@@ -117,6 +191,7 @@
     const dt = last ? Math.min(0.1, (ts - last) / 1000) : 0;
     last = ts;
     if (live.length) marqueeFrame(dt);
+    confettiFrame(dt);
   }
 
   // ---- screen fitting + TV niceties ----
@@ -125,7 +200,7 @@
     const w = innerWidth, h = innerHeight, k = Math.min(w / 1920, h / 1080);
     stage.style.transform = `translate(${(w - 1920 * k) / 2}px, ${(h - 1080 * k) / 2}px) scale(${k})`;
   }
-  addEventListener('resize', fit);
+  addEventListener('resize', () => { fit(); if (bits.length) sizeConfetti(); });
   const fullscreen = () => (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen?.())?.catch?.(() => {});
   addEventListener('dblclick', fullscreen);
   addEventListener('keydown', (e) => { if (e.key.toLowerCase() === 'f') fullscreen(); });
