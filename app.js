@@ -1,7 +1,10 @@
-/* Haven countdown. One big countdown to the next haven + a marquee of the havens running right now.
+/* Haven countdown. Counts down to the first haven on Nov 14, then to the last one ending,
+ * with a small marquee of the havens going on right now.
  *
- * URL options (all optional, for testing / rehearsals):
- *   ?at=2026-11-13T03:59:50Z   pretend it's this moment
+ * Only havens that start on Nov 14 or 15 (their local date) count. Early/late one-offs are ignored.
+ *
+ * URL options (for testing / rehearsals):
+ *   ?at=2026-11-13T19:59:50Z   pretend it's this moment
  *   ?speed=60                  run the clock faster
  */
 (() => {
@@ -18,51 +21,63 @@
   const base = isNaN(atMs) ? realStart : atMs;
   const now = () => base + (Date.now() - realStart) * speed;
 
+  const DAYS = ['2026-11-14', '2026-11-15'];
+  const localDay = (ms, tz) => {
+    try { return new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' }).format(ms); } catch { return ''; }
+  };
   const EVENTS = ((window.HAVEN_DATA || {}).events || [])
-    .map((e) => ({ name: e.name, country: e.country || '', tz: e.tz || 'UTC', start: Date.parse(e.start), end: Date.parse(e.end) }))
-    .filter((e) => e.end > e.start)
+    .map((e) => ({ name: e.name, start: Date.parse(e.start), end: Date.parse(e.end), tz: e.tz || 'UTC' }))
+    .filter((e) => e.end > e.start && DAYS.includes(localDay(e.start, e.tz)))
     .sort((a, b) => a.start - b.start || a.name.localeCompare(b.name));
+  const FIRST = Math.min(...EVENTS.map((e) => e.start));
+  const LAST = Math.max(...EVENTS.map((e) => e.end));
 
+  // ---- countdown ----
   const pad = (n) => String(n).padStart(2, '0');
-
-  // ---- big center ----
   let shape = '';
-  let over = false;
-  function setText(id, text) { const el = $(id); if (el.textContent !== text) el.textContent = text; }
-
-  function showCountdown(ms) {
+  function showCountdown(ms, final) {
     const s = Math.max(0, Math.floor(ms / 1000));
-    const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
-    const units = d ? [['days', String(d)], ['hours', pad(h)], ['mins', pad(m)], ['secs', pad(sec)]]
-      : [['hours', pad(h)], ['mins', pad(m)], ['secs', pad(sec)]];
+    const units = [['hr', pad(Math.floor(s / 3600))], ['min', pad(Math.floor((s % 3600) / 60))], ['sec', pad(s % 60)]];
     const box = $('digits');
-    const sh = 'cd' + units.map(([k, v]) => k + v.length).join();
+    const sh = units.map(([, v]) => v.length).join();
     if (sh !== shape) {
-      box.innerHTML = units.map(([k, v], i) => (i ? '<div class="sep">:</div>' : '') +
-        `<div class="num" data-u="${k}">${[...v].map((c) => `<span>${c}</span>`).join('')}</div>`).join('');
+      box.innerHTML = units.map(([k, v]) =>
+        `<div class="unit"><div class="num" data-u="${k}">${[...v].map((c) => `<span>${c}</span>`).join('')}</div><div class="u">${k}</div></div>`).join('');
       shape = sh;
     } else {
       for (const [k, v] of units) {
         box.querySelectorAll(`[data-u="${k}"] span`).forEach((el, i) => { if (el.textContent !== v[i]) el.textContent = v[i]; });
       }
     }
-    box.classList.toggle('days', !!d);
-    box.classList.toggle('final', s <= 10 && ms > -1000 && !over);
+    box.classList.toggle('final', final && s <= 10);
   }
-  // ---- marquee of live havens ----
+  function setText(id, text) { const el = $(id); if (el.textContent !== text) el.textContent = text; }
+
+  // ---- marquee: "going on now  Christchurch · Melbourne · ..." ----
   const track = $('track');
-  let x = null, queue = [], live = [], prevLive = new Set();
+  const TAG_EVERY = 15;
+  let x = 0, queue = [], live = [], prevLive = new Set();
+  function cycle() {
+    const out = [];
+    live.forEach((e, i) => { if (i % TAG_EVERY === 0) out.push(null); out.push(e.name); });
+    return out;
+  }
   function marqueeFrame(dt) {
     const win = track.parentElement.offsetWidth;
-    if (x === null) x = 0;
-    x -= 110 * dt;
+    x -= 70 * dt;
     let first = track.firstElementChild;
-    while (first && x + first.offsetWidth < 0) { x += first.offsetWidth; first.remove(); first = track.firstElementChild; }
+    // spans are flex items, so offsetWidth already includes the "·" separator
+    while (first && x + first.offsetWidth < 0) {
+      x += first.offsetWidth;
+      first.remove();
+      first = track.firstElementChild;
+    }
     let guard = 0;
-    while (live.length && track.scrollWidth + x < win + 200 && guard++ < 40) {
-      if (!queue.length) queue = live.map((e) => e.name);
+    while (track.scrollWidth + x < win + 200 && guard++ < 40) {
+      if (!queue.length) queue = cycle();
+      const item = queue.shift();
       const s = document.createElement('span');
-      s.textContent = `Haven ${queue.shift()}`;
+      if (item === null) { s.className = 'tag'; s.textContent = 'going on now'; } else s.textContent = item;
       track.appendChild(s);
     }
     track.style.transform = `translate3d(${x}px,0,0)`;
@@ -72,20 +87,27 @@
   function tick() {
     const t = now();
     live = EVENTS.filter((e) => e.start <= t && t < e.end);
-    const upcoming = EVENTS.filter((e) => e.start > t);
 
-    const next = upcoming[0];
-    over = !next && !live.length;
-    showCountdown(next ? next.start - t : live.length ? Math.max(...live.map((e) => e.end)) - t : 0);
+    if (t < FIRST) {
+      showCountdown(FIRST - t, true);
+      setText('caption', 'until Haven');
+    } else if (t < LAST) {
+      showCountdown(LAST - t, false);
+      setText('caption', 'Haven has started');
+    } else {
+      showCountdown(0, false);
+      setText('caption', 'Haven is over · all events have happened');
+    }
 
     // havens that just started jump the marquee queue; finished ones drop out of it
-    const liveNames = new Set(live.map((e) => e.name));
+    const names = new Set(live.map((e) => e.name));
     const fresh = live.filter((e) => !prevLive.has(e.name)).map((e) => e.name);
-    if (prevLive.size || fresh.length) queue = [...fresh, ...queue.filter((n) => liveNames.has(n) && !fresh.includes(n))];
-    prevLive = liveNames;
-
+    if (fresh.length || prevLive.size !== names.size) {
+      queue = [...fresh, ...queue.filter((n) => n === null || (names.has(n) && !fresh.includes(n)))];
+    }
+    prevLive = names;
     $('marquee').hidden = !live.length;
-    setText('marquee-tag', `${live.length} live now`);
+
     if (simulated) $('sim').textContent = `simulated · ${new Date(t).toISOString().slice(0, 19).replace('T', ' ')} UTC${speed !== 1 ? ` · ×${speed}` : ''}`;
   }
 

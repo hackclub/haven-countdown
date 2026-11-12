@@ -1,12 +1,14 @@
 # haven-countdown
 
-Big-screen countdown for Hack Club Haven: one huge countdown to the next haven starting, plus a marquee of every haven live right now.
+Big-screen countdown for Hack Club Haven. Counts down to the first haven on Nov 14 (Christchurch, 9 am NZ time), then says "Haven has started" and counts down to the last one ending (LA, Sun 9 pm). A small marquee at the bottom lists the havens going on right now.
+
+Only havens that start on Nov 14 or 15 (local date) count; the early and late one-offs are ignored.
 
 Static site, no build step. Open `index.html` (works straight from disk too) and press `F` or double-click for fullscreen.
 
 ## testing
 
-- `?at=2026-11-13T03:59:50Z` pretends it's that moment
+- `?at=2026-11-13T19:59:50Z` pretends it's that moment
 - `?speed=60` runs the clock faster
 
 e.g. `index.html?at=2026-11-14T14:59:40Z` to see a bunch of havens start at once.
