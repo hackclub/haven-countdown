@@ -49,7 +49,7 @@
         box.querySelectorAll(`[data-u="${k}"] span`).forEach((el, i) => { if (el.textContent !== v[i]) el.textContent = v[i]; });
       }
     }
-    box.classList.toggle('final', final && s <= 10);
+    box.classList.toggle('final', final && s <= 20);
   }
   function setText(id, text) { const el = $(id); if (el.textContent !== text) el.textContent = text; }
 
