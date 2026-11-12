@@ -27,6 +27,7 @@
 
   // ---- big center ----
   let shape = '';
+  let over = false;
   function setText(id, text) { const el = $(id); if (el.textContent !== text) el.textContent = text; }
 
   function showCountdown(ms) {
@@ -46,11 +47,11 @@
       }
     }
     box.classList.toggle('days', !!d);
-    box.classList.toggle('final', s <= 10);
+    box.classList.toggle('final', s <= 10 && ms > -1000 && !over);
   }
   // ---- marquee of live havens ----
   const track = $('track');
-  let x = null, queue = [], live = [];
+  let x = null, queue = [], live = [], prevLive = new Set();
   function marqueeFrame(dt) {
     const win = track.parentElement.offsetWidth;
     if (x === null) x = 0;
@@ -74,7 +75,14 @@
     const upcoming = EVENTS.filter((e) => e.start > t);
 
     const next = upcoming[0];
+    over = !next && !live.length;
     showCountdown(next ? next.start - t : live.length ? Math.max(...live.map((e) => e.end)) - t : 0);
+
+    // havens that just started jump the marquee queue; finished ones drop out of it
+    const liveNames = new Set(live.map((e) => e.name));
+    const fresh = live.filter((e) => !prevLive.has(e.name)).map((e) => e.name);
+    if (prevLive.size || fresh.length) queue = [...fresh, ...queue.filter((n) => liveNames.has(n) && !fresh.includes(n))];
+    prevLive = liveNames;
 
     $('marquee').hidden = !live.length;
     setText('marquee-tag', `${live.length} live now`);
