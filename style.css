@@ -69,6 +69,41 @@ body.idle { cursor: none; }
 .digits.final .num { color: var(--butter); }
 @keyframes thump { 0%, 100% { transform: scale(1); } 15% { transform: scale(1.04); } }
 .caption { font-family: var(--display); font-size: 84px; color: var(--butter); margin-top: 56px; text-shadow: var(--shadow); }
+.ended-gallery { display: none; }
+.ended .digits { display: none; }
+.ended .center { top: 245px; bottom: 115px; justify-content: flex-start; }
+.ended .caption { margin-top: 40px; font-size: 104px; animation: appear .9s cubic-bezier(.2, .8, .2, 1) both; }
+.ended-gallery {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  width: 1680px;
+  margin-top: 36px;
+}
+.ended-gallery figure {
+  width: 170px;
+  height: 220px;
+  margin: 0;
+  overflow: hidden;
+  border: 8px solid #fff;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 12px 30px rgba(90, 20, 0, .35);
+  transform: rotate(var(--tilt));
+  animation: photo-float 5s ease-in-out infinite;
+}
+.ended-gallery figure:nth-child(1) { --tilt: -5deg; animation-delay: -.8s; }
+.ended-gallery figure:nth-child(2) { --tilt: 2deg; animation-delay: -2.2s; }
+.ended-gallery figure:nth-child(3) { --tilt: -2deg; animation-delay: -3.4s; }
+.ended-gallery figure:nth-child(4) { --tilt: 5deg; animation-delay: -1.5s; }
+.ended-gallery figure:nth-child(5) { --tilt: -3deg; animation-delay: -4.1s; }
+.ended-gallery img { width: 100%; height: 100%; object-fit: cover; display: block; }
+@keyframes appear { from { opacity: 0; transform: translateY(28px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes photo-float {
+  0%, 100% { transform: translateY(0) rotate(var(--tilt)); }
+  50% { transform: translateY(-18px) rotate(calc(var(--tilt) * -1)); }
+}
 
 /* small marquee of what's going on now */
 .marquee {
@@ -87,4 +122,6 @@ body.idle { cursor: none; }
 #confetti { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
 .sim { position: absolute; left: 50%; top: 4px; transform: translateX(-50%); background: rgba(60, 20, 0, .6); font: 15px ui-monospace, monospace; padding: 2px 12px; border-radius: 8px; }
 
-@media (prefers-reduced-motion: reduce) { #bg, .digits.final { animation: none; } }
+@media (prefers-reduced-motion: reduce) {
+  #bg, .digits.final, .ended .caption, .ended-gallery figure { animation: none; }
+}

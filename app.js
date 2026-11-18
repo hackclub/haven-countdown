@@ -170,8 +170,9 @@
       setText('caption', 'Haven has started');
     } else {
       showCountdown(0, false);
-      setText('caption', 'Haven is over');
+      setText('caption', 'Haven has ended');
     }
+    document.body.classList.toggle('ended', t >= LAST);
 
     // havens that just started jump the marquee queue; finished ones drop out of it
     const names = new Set(live.map((e) => e.name));
